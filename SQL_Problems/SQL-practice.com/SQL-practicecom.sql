@@ -180,6 +180,56 @@ from patients
 group by first_name, last_name
 having count(*) > 1;
 
+
+-- Display patient's full name,
+-- height in the units feet rounded to 1 decimal,
+-- weight in the unit pounds rounded to 0 decimals,
+-- birth_date,
+-- gender non abbreviated.
+
+-- Convert CM to feet by dividing by 30.48.
+-- Convert KG to pounds by multiplying by 2.205.
+select  concat(first_name, " ", last_name) as Full_name, round((height / 30.48),1) as height_feet,
+round((weight*2.205),0) as Weight_kgs, birth_date,
+case
+	when gender = 'M' then 'Male'
+    WHen gender = 'F' Then 'Female'
+    end as Gender
+from patients;
+
+-- For every admission, display the patient's full name, their admission diagnosis, and their doctor's full name who diagnosed their problem.
+select concat(p.first_name, " ",p.last_name) as Full_name, a.diagnosis,
+concat(d.first_name, " ", d.last_name) as Full_name_Doctor  
+from patients p 
+inner join admissions a using(patient_id)
+inner join doctors d on a.attending_doctor_id = d.doctor_id;
+
+-- Show patient_id, first_name, last_name from patients whose does not have any records in the admissions table. 
+-- (Their patient_id does not exist in any admissions.patient_id rows.)-
+select p.patient_id, p.first_name, p.last_name
+from patients p 
+where p.patient_id not in (select distinct a.patient_id from admissions a);
+
+-- Show patient_id, attending_doctor_id, and diagnosis for admissions that match one of the two criteria:
+-- 1. patient_id is an odd number and attending_doctor_id is either 1, 5, or 19.
+-- 2. attending_doctor_id contains a 2 and the length of patient_id is 3 characters.
+select distinct patient_id, attending_doctor_id, diagnosis
+from admissions
+where ((patient_id %2 !=0) and (attending_doctor_id IN (1,5,19))) 
+			or 	((attending_doctor_id like '%2%') and (length(patient_id)=3));
+
+-- We want to display each patient's full name in a single column. Their last_name in all upper letters must appear first, then first_name in all lower case letters. Separate the last_name and first_name with a comma. Order the list by the first_name in decending order
+-- EX: SMITH,jane 
+select concat(upper(last_name), ",",lower(first_name)) as Full_name
+from patients
+order by first_name desc;
+
+-- Show all of the days of the month (1-31) and how many admission_dates occurred on that day. Sort by the day with most admissions to least admissions.
+select day(admission_date) as day_number, count(*) as number_of_admission
+from admissions
+group by day_number
+order by number_of_admission desc;
+
 -- ------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Hard Level 
 -- ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -191,4 +241,34 @@ CASE
 	WHEN (weight/power(height/100.0, 2)) >= 30 THEN 1
     ELSE 0
 END AS isobese
-FROM patients
+FROM patients;
+
+-- Show patient_id, first_name, last_name, and attending doctor's specialty.
+-- Show only the patients who has a diagnosis as 'Epilepsy' and the doctor's first name is 'Lisa'
+
+select p.patient_id, p.first_name, p.last_name, d.specialty
+from patients p 
+inner join admissions a using(patient_id)
+inner join doctors d on a.attending_doctor_id = d.doctor_id
+where a.diagnosis = 'Epilepsy' and d.first_name='Lisa';
+
+-- We need a breakdown for the total amount of admissions each doctor has started each year. 
+-- Show the doctor_id, doctor_full_name, specialty, year, total_admissions for that year.
+
+select distinct d.doctor_id, concat(d.first_name, " ", d.last_name) as FullName, d.specialty, 
+year(a.admission_date),count(a.admission_date)
+from admissions a 
+right  join doctors d on a.attending_doctor_id = d.doctor_id
+group by FullName, year(a.admission_date)
+order by d.doctor_id, year(a.admission_date);
+
+-- For each day display the total amount of admissions on that day. Display the amount changed from the previous date.
+SELECT
+ admission_date,
+ count(admission_date) as admission_day,
+ count(admission_date) - LAG(count(admission_date)) OVER(ORDER BY admission_date) AS admission_count_change 
+FROM admissions
+ group by admission_date;
+
+
+
